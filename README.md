@@ -1,52 +1,37 @@
 # pipex-little-test
 
+# Tests básicos
+echo "=== Tests básicos ==="
+./pipex "ls -l" "wc -l"              # Cuenta líneas de 'ls -l'
+./pipex "cat Makefile" "grep pipex"   # Busca 'pipex' en Makefile
+./pipex "echo hello" "cat -e"         # Muestra 'hello$' con $ al final
 
-# =============================================
-# PRUEBAS BÁSICAS (Funcionalidad principal)
-# =============================================
+# Tests con paths absolutos
+echo -e "\n=== Tests con paths absolutos ==="
+./pipex "/bin/ls" "/usr/bin/wc -c"    # Usa rutas completas de binarios
 
-# 1. Pipe básico (contar líneas)
-./pipex file1.txt "cat" "wc -l" file2.txt          # Equivale a: < file1.txt cat | wc -l > file2.txt
+# Tests con comandos que fallan
+echo -e "\n=== Tests de manejo de errores ==="
+./pipex "comando_inexistente" "wc -c" # Primer comando falla
+./pipex "ls -l" "comando_inexistente" # Segundo comando falla
 
-# 2. Comandos con argumentos
-./pipex file1.txt "grep 'hola'" "awk '{print \$1}'" file2.txt  # Filtra y extrae la primera columna
+# Tests comparativos con pipe real
+echo -e "\n=== Tests comparativos ==="
+./pipex "ls -l" "wc -l" > output_pipex
+ls -l | wc -l > output_real
+echo "Diferencias con pipe real:"
+diff output_pipex output_real         # No debe mostrar diferencias
+rm output_pipex output_real
 
-# 3. Rutas absolutas de comandos
-./pipex file1.txt "/bin/cat" "/usr/bin/wc -w" file2.txt        # Cuenta palabras usando rutas completas
+# Test con múltiples comandos (si tu pipex lo soporta)
+echo -e "\n=== Test con múltiples pipes (si implementado) ==="
+./pipex "ps aux" "grep bash" "awk '{print \$2}'" "head -n 3"  # Proceso de 3 pasos
 
-# =============================================
-# PRUEBAS DE ERRORES (Robustez)
-# =============================================
+# Tests con caracteres especiales
+echo -e "\n=== Tests con caracteres especiales ==="
+./pipex "echo 'hola mundo'" "tr 'a-z' 'A-Z'"   # Convertir a mayúsculas
+./pipex "echo \"hola\nadios\"" "grep hola"     # Manejo de saltos de línea
 
-# 4. Archivo de entrada inexistente
-./pipex no_existe.txt "cat" "wc -l" file2.txt      # Debe fallar con "No such file..."
-
-# 5. Comando inválido
-./pipex file1.txt "comando_falso" "wc -l" file2.txt # Debe mostrar "command not found"
-
-# 6. Permisos denegados en output
-touch file_prohibido.txt && chmod 000 file_prohibido.txt
-./pipex file1.txt "cat" "wc -l" file_prohibido.txt  # Debe dar "Permission denied"
-
-# 7. Directorio como output
-mkdir carpeta_falsa
-./pipex file1.txt "cat" "wc -l" carpeta_falsa      # Debe fallar (es directorio)
-
-# =============================================
-# PRUEBAS AVANZADAS (Casos complejos)
-# =============================================
-
-# 8. Múltiples argumentos en comandos
-./pipex file1.txt "ls -la" "grep '.txt'" file2.txt # Filtra archivos .txt del ls
-
-# 9. Comandos anidados (usando xargs)
-./pipex file1.txt "echo \"hola\"" "xargs -I {} echo {} mundo" file2.txt  # Debe imprimir "hola mundo"
-
-# 10. Variables de entorno
-./pipex file1.txt "echo \$HOME" "wc -c" file2.txt  # Cuenta caracteres de la ruta $HOME
-
-# =============================================
-# VERIFICACIÓN DE RESULTADOS
-# =============================================
-echo -e "\n\033[1;36m=== Resultados ===\033[0m"
-cat file2.txt 2>/dev/null || echo "El archivo de salida no se creó (comportamiento esperado en pruebas de error)"
+# Test de rendimiento con datos grandes
+echo -e "\n=== Test de rendimiento ==="
+./pipex "dd if=/dev/zero bs=1M count=10 2>/dev/null" "wc -c" # Debe mostrar 10485760
