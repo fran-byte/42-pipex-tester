@@ -1,37 +1,68 @@
-# pipex-little-test
+#!/bin/bash
 
-# Tests básicos
-echo "=== Tests básicos ==="
-./pipex "ls -l" "wc -l"              # Cuenta líneas de 'ls -l'
-./pipex "cat Makefile" "grep pipex"   # Busca 'pipex' en Makefile
-./pipex "echo hello" "cat -e"         # Muestra 'hello$' con $ al final
+# =============================================
+# TESTS PARA PIPEX (4 argumentos: infile cmd1 cmd2 outfile)
+# =============================================
 
-# Tests con paths absolutos
-echo -e "\n=== Tests con paths absolutos ==="
-./pipex "/bin/ls" "/usr/bin/wc -c"    # Usa rutas completas de binarios
+# Configuración
+INFILE="infile"          # Archivo de entrada de prueba
+OUTFILE="outfile_pipex"  # Salida de tu pipex
+OUTFILE_BASH="outfile_bash"  # Salida del pipe real
+TESTFILE="testfile.txt"  # Archivo temporal para tests
 
-# Tests con comandos que fallan
-echo -e "\n=== Tests de manejo de errores ==="
-./pipex "comando_inexistente" "wc -c" # Primer comando falla
-./pipex "ls -l" "comando_inexistente" # Segundo comando falla
+# Crear archivo de prueba
+echo -e "hola mundo\npipe testing\n123" > $INFILE
+echo -e "esto es un test\nlinea 2\nfin" > $TESTFILE
 
-# Tests comparativos con pipe real
-echo -e "\n=== Tests comparativos ==="
-./pipex "ls -l" "wc -l" > output_pipex
-ls -l | wc -l > output_real
-echo "Diferencias con pipe real:"
-diff output_pipex output_real         # No debe mostrar diferencias
-rm output_pipex output_real
+# ---- Tests básicos ----
+echo -e "\n\033[1;36m>>> Tests básicos:\033[0m"
 
-# Test con múltiples comandos (si tu pipex lo soporta)
-echo -e "\n=== Test con múltiples pipes (si implementado) ==="
-./pipex "ps aux" "grep bash" "awk '{print \$2}'" "head -n 3"  # Proceso de 3 pasos
+# 1. Contar líneas
+./pipex $INFILE "cat" "wc -l" $OUTFILE
+< $INFILE cat | wc -l > $OUTFILE_BASH
+diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 1 (wc -l) OK" || echo "❌ Test 1 FAIL"
 
-# Tests con caracteres especiales
-echo -e "\n=== Tests con caracteres especiales ==="
-./pipex "echo 'hola mundo'" "tr 'a-z' 'A-Z'"   # Convertir a mayúsculas
-./pipex "echo \"hola\nadios\"" "grep hola"     # Manejo de saltos de línea
+# 2. Buscar texto y contar palabras
+./pipex $INFILE "grep pipe" "wc -w" $OUTFILE
+< $INFILE grep pipe | wc -w > $OUTFILE_BASH
+diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 2 (grep + wc) OK" || echo "❌ Test 2 FAIL"
 
-# Test de rendimiento con datos grandes
-echo -e "\n=== Test de rendimiento ==="
-./pipex "dd if=/dev/zero bs=1M count=10 2>/dev/null" "wc -c" # Debe mostrar 10485760
+# ---- Tests con rutas absolutas ----
+echo -e "\n\033[1;36m>>> Tests con rutas absolutas:\033[0m"
+
+./pipex $INFILE "/bin/cat" "/usr/bin/wc -c" $OUTFILE
+< $INFILE /bin/cat | /usr/bin/wc -c > $OUTFILE_BASH
+diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 3 (rutas absolutas) OK" || echo "❌ Test 3 FAIL"
+
+# ---- Tests de errores ----
+echo -e "\n\033[1;36m>>> Tests de manejo de errores:\033[0m"
+
+# 4. Comando 1 no existe
+./pipex $INFILE "no_existo" "wc -l" $OUTFILE 2>/dev/null
+[ $? -ne 0 ] && echo "✅ Test 4 (cmd1 error) OK" || echo "❌ Test 4 FAIL"
+
+# 5. Comando 2 no existe
+./pipex $INFILE "cat" "no_existo" $OUTFILE 2>/dev/null
+[ $? -ne 0 ] && echo "✅ Test 5 (cmd2 error) OK" || echo "❌ Test 5 FAIL"
+
+# 6. Archivo de entrada no existe
+./pipex "no_existo.txt" "cat" "wc -l" $OUTFILE 2>/dev/null
+[ $? -ne 0 ] && echo "✅ Test 6 (infile error) OK" || echo "❌ Test 6 FAIL"
+
+# ---- Tests avanzados ----
+echo -e "\n\033[1;36m>>> Tests avanzados:\033[0m"
+
+# 7. Transformación de texto (mayúsculas)
+./pipex $INFILE "tr a-z A-Z" "cat" $OUTFILE
+< $INFILE tr a-z A-Z | cat > $OUTFILE_BASH
+diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 7 (tr + cat) OK" || echo "❌ Test 7 FAIL"
+
+# 8. Procesamiento múltiple (grep + sort + head)
+./pipex $TESTFILE "grep 'e'" "sort" $OUTFILE
+< $TESTFILE grep 'e' | sort > $OUTFILE_BASH
+diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 8 (grep + sort) OK" || echo "❌ Test 8 FAIL"
+
+# ---- Limpieza ----
+rm -f $INFILE $TESTFILE $OUTFILE $OUTFILE_BASH
+
+echo -e "\n\033[1;32mTests completados!\033[0m"
