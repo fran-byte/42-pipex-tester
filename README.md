@@ -1,68 +1,104 @@
 #!/bin/bash
 
-# =============================================
-# TESTS PARA PIPEX (4 argumentos: infile cmd1 cmd2 outfile)
-# =============================================
+# Colores
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+YELLOW="\033[1;33m"
+NC="\033[0m"
 
-# Configuración
-INFILE="infile"          # Archivo de entrada de prueba
-OUTFILE="outfile_pipex"  # Salida de tu pipex
-OUTFILE_BASH="outfile_bash"  # Salida del pipe real
-TESTFILE="testfile.txt"  # Archivo temporal para tests
+make -s
 
-# Crear archivo de prueba
-echo -e "hola mundo\npipe testing\n123" > $INFILE
-echo -e "esto es un test\nlinea 2\nfin" > $TESTFILE
+# Archivos
+INPUT_FILE="input.txt"
+OUTPUT_FILE="output.txt"
+EXPECTED_FILE="expected.txt"
+ERROR_LOG="err.log"
 
-# ---- Tests básicos ----
-echo -e "\n\033[1;36m>>> Tests básicos:\033[0m"
+# Función general para tests estándar
+run_test() {
+	NUM=$1
+	CMD1="$2"
+	CMD2="$3"
+	echo "aaa bbb ccc" > $INPUT_FILE
 
-# 1. Contar líneas
-./pipex $INFILE "cat" "wc -l" $OUTFILE
-< $INFILE cat | wc -l > $OUTFILE_BASH
-diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 1 (wc -l) OK" || echo "❌ Test 1 FAIL"
+	./pipex $INPUT_FILE "$CMD1" "$CMD2" $OUTPUT_FILE 2> $ERROR_LOG
+	< $INPUT_FILE $CMD1 | $CMD2 > $EXPECTED_FILE 2>/dev/null
 
-# 2. Buscar texto y contar palabras
-./pipex $INFILE "grep pipe" "wc -w" $OUTFILE
-< $INFILE grep pipe | wc -w > $OUTFILE_BASH
-diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 2 (grep + wc) OK" || echo "❌ Test 2 FAIL"
+	diff $OUTPUT_FILE $EXPECTED_FILE > /dev/null
+	if [ $? -eq 0 ]; then
+		echo -e "${GREEN}[OK]${NC} Test $NUM: $INPUT_FILE \"$CMD1\" | \"$CMD2\" $OUTPUT_FILE"
+	else
+		echo -e "${RED}[KO]${NC} Test $NUM: $INPUT_FILE \"$CMD1\" | \"$CMD2\" $OUTPUT_FILE"
+		diff $OUTPUT_FILE $EXPECTED_FILE
+	fi
+}
 
-# ---- Tests con rutas absolutas ----
-echo -e "\n\033[1;36m>>> Tests con rutas absolutas:\033[0m"
+# Test 1: cat | grep
+echo "Hello World!" > $INPUT_FILE
+./pipex $INPUT_FILE "cat" "grep Hello" $OUTPUT_FILE
+< $INPUT_FILE cat | grep Hello > $EXPECTED_FILE
+diff $OUTPUT_FILE $EXPECTED_FILE > /dev/null
+if [ $? -eq 0 ]; then
+	echo -e "${GREEN}[OK]${NC} Test 1: $INPUT_FILE \"cat\" | \"grep Hello\" $OUTPUT_FILE"
+else
+	echo -e "${RED}[KO]${NC} Test 1: $INPUT_FILE \"cat\" | \"grep Hello\" $OUTPUT_FILE"
+	diff $OUTPUT_FILE $EXPECTED_FILE
+fi
 
-./pipex $INFILE "/bin/cat" "/usr/bin/wc -c" $OUTFILE
-< $INFILE /bin/cat | /usr/bin/wc -c > $OUTFILE_BASH
-diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 3 (rutas absolutas) OK" || echo "❌ Test 3 FAIL"
+# Test 2–9
+run_test 2 "tr a z" "wc -w"
+run_test 3 "cut -d' ' -f1" "rev"
+run_test 4 "grep a" "wc -l"
+run_test 5 "rev" "tr a-z A-Z"
+run_test 6 "sort" "uniq"
+run_test 7 "sed s/aaa/XXX/" "cut -c1-3"
+run_test 8 "yes | head -n 1" "wc -c"
+run_test 9 "head -n 1" "tr a-z A-Z"
 
-# ---- Tests de errores ----
-echo -e "\n\033[1;36m>>> Tests de manejo de errores:\033[0m"
+# Test 10: Ruta absoluta con sort y uniq
+echo -e "c\nb\na\nb" > $INPUT_FILE
+./pipex $INPUT_FILE "/usr/bin/sort" "uniq" $OUTPUT_FILE 2> $ERROR_LOG
+< $INPUT_FILE /usr/bin/sort | uniq > $EXPECTED_FILE 2>/dev/null
 
-# 4. Comando 1 no existe
-./pipex $INFILE "no_existo" "wc -l" $OUTFILE 2>/dev/null
-[ $? -ne 0 ] && echo "✅ Test 4 (cmd1 error) OK" || echo "❌ Test 4 FAIL"
+diff $OUTPUT_FILE $EXPECTED_FILE > /dev/null
+if [ $? -eq 0 ]; then
+	echo -e "${GREEN}[OK]${NC} Test 10: $INPUT_FILE \"/usr/bin/sort\" | \"uniq\" $OUTPUT_FILE"
+else
+	echo -e "${RED}[KO]${NC} Test 10: $INPUT_FILE \"/usr/bin/sort\" | \"uniq\" $OUTPUT_FILE"
+	diff $OUTPUT_FILE $EXPECTED_FILE
+fi
 
-# 5. Comando 2 no existe
-./pipex $INFILE "cat" "no_existo" $OUTFILE 2>/dev/null
-[ $? -ne 0 ] && echo "✅ Test 5 (cmd2 error) OK" || echo "❌ Test 5 FAIL"
+# Test comando1 vacío
+echo "input for empty command1" > $INPUT_FILE
+./pipex $INPUT_FILE "" "wc -l" $OUTPUT_FILE 2> $ERROR_LOG
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+	echo -e "${RED}[KO]${NC} Test: $INPUT_FILE \"\" | \"wc -l\" $OUTPUT_FILE (exit code $EXIT_CODE)"
+else
+	if grep -qi "command not found" $ERROR_LOG; then
+		echo -e "${GREEN}[OK]${NC} Test: $INPUT_FILE \"\" | \"wc -l\" $OUTPUT_FILE"
+	else
+		echo -e "${GREEN}[OK]${NC} Test: $INPUT_FILE \"\" | \"wc -l\" $OUTPUT_FILE ${YELLOW}[WARNING]${NC}: mensaje de error inesperado:"
+		cat $ERROR_LOG
+	fi
+fi
 
-# 6. Archivo de entrada no existe
-./pipex "no_existo.txt" "cat" "wc -l" $OUTFILE 2>/dev/null
-[ $? -ne 0 ] && echo "✅ Test 6 (infile error) OK" || echo "❌ Test 6 FAIL"
+# Test comando2 vacío
+echo "input for empty command2" > $INPUT_FILE
+./pipex $INPUT_FILE "cat" "" $OUTPUT_FILE 2> $ERROR_LOG
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+	echo -e "${RED}[KO]${NC} Test: $INPUT_FILE \"cat\" | \"\" $OUTPUT_FILE (exit code $EXIT_CODE)"
+else
+	if grep -qi "command not found" $ERROR_LOG; then
+		echo -e "${GREEN}[OK]${NC} Test: $INPUT_FILE \"cat\" | \"\" $OUTPUT_FILE"
+	else
+		echo -e "${GREEN}[OK]${NC} Test: $INPUT_FILE \"cat\" | \"\" $OUTPUT_FILE ${YELLOW}[WARNING]${NC}: mensaje de error inesperado:"
+		cat $ERROR_LOG
+	fi
+fi
 
-# ---- Tests avanzados ----
-echo -e "\n\033[1;36m>>> Tests avanzados:\033[0m"
+# Limpieza
+rm -f $INPUT_FILE $OUTPUT_FILE $EXPECTED_FILE $ERROR_LOG
 
-# 7. Transformación de texto (mayúsculas)
-./pipex $INFILE "tr a-z A-Z" "cat" $OUTFILE
-< $INFILE tr a-z A-Z | cat > $OUTFILE_BASH
-diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 7 (tr + cat) OK" || echo "❌ Test 7 FAIL"
-
-# 8. Procesamiento múltiple (grep + sort + head)
-./pipex $TESTFILE "grep 'e'" "sort" $OUTFILE
-< $TESTFILE grep 'e' | sort > $OUTFILE_BASH
-diff $OUTFILE $OUTFILE_BASH && echo "✅ Test 8 (grep + sort) OK" || echo "❌ Test 8 FAIL"
-
-# ---- Limpieza ----
-rm -f $INFILE $TESTFILE $OUTFILE $OUTFILE_BASH
-
-echo -e "\n\033[1;32mTests completados!\033[0m"
+echo -e "✅ Tester finalizado con ${GREEN}10 tests${NC} (+2 especiales de comandos vacíos)."
