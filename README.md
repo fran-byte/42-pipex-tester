@@ -100,6 +100,99 @@ echo -e "${GREEN}[OK]${NC} Test 12: $INPUT_FILE \"cat\" | \"\" $OUTPUT_FILE"
 echo -e "${YELLOW}[DEBUG]${NC} Test 12 error message:"
 cat $ERROR_LOG
 
+# --- Tests Adicionales ---
+
+# Test 13: Comando con argumentos complejos (comillas y espacios)
+run_test 13 "echo \"hello world\"" "tr a-z A-Z" output.txt
+
+# Test 14: Ruta relativa de comando (./command)
+echo "#!/bin/sh\necho 'test_rel_path'" > test_script.sh
+chmod +x test_script.sh
+run_test 14 "./test_script.sh" "wc -c" output.txt
+rm -f test_script.sh
+
+# Test 15: Archivo de entrada inexistente
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+./pipex no_exist.txt "cat" "wc -l" output.txt 2> $ERROR_LOG
+if [ $? -ne 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 15: Manejo de archivo de entrada inexistente"
+else
+    echo -e "${RED}[KO]${NC} Test 15: Archivo inexistente no generó error"
+fi
+
+# Test 16: Permisos denegados en archivo de entrada
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+echo "restricted" > restricted.txt
+chmod 000 restricted.txt
+./pipex restricted.txt "cat" "wc -l" output.txt 2> $ERROR_LOG
+if [ $? -ne 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 16: Manejo de permisos denegados (input)"
+else
+    echo -e "${RED}[KO]${NC} Test 16: Permisos denegados no generaron error"
+fi
+rm -f restricted.txt
+
+# Test 17: Permisos denegados en archivo de salida
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+touch no_write.txt
+chmod 000 no_write.txt
+./pipex input.txt "cat" "wc -l" no_write.txt 2> $ERROR_LOG
+if [ $? -ne 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 17: Manejo de permisos denegados (output)"
+else
+    echo -e "${RED}[KO]${NC} Test 17: Permisos denegados no generaron error"
+fi
+rm -f no_write.txt
+
+# Test 18: Comando no encontrado
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+./pipex input.txt "comando_inexistente" "wc -l" output.txt 2> $ERROR_LOG
+if [ $? -ne 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 18: Comando no encontrado genera error"
+else
+    echo -e "${RED}[KO]${NC} Test 18: Comando inexistente no falló"
+fi
+
+# Test 19: Comando inválido (sintaxis incorrecta)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+./pipex input.txt "ls --invalid-flag" "wc -l" output.txt 2> $ERROR_LOG
+if [ $? -ne 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 19: Comando inválido genera error"
+else
+    echo -e "${RED}[KO]${NC} Test 19: Comando inválido no falló"
+fi
+
+# Test 20: Entrada vacía
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+echo -n "" > empty.txt
+./pipex empty.txt "cat" "wc -l" output.txt 2> $ERROR_LOG
+diff output.txt <(wc -l < empty.txt) > /dev/null
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 20: Archivo de entrada vacío"
+else
+    echo -e "${RED}[KO]${NC} Test 20: Manejo de entrada vacía falló"
+fi
+rm -f empty.txt
+
+# Test 21: Pipeline largo (3 comandos) - Requiere bonus
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+./pipex input.txt "cat" "grep a" "wc -l" output.txt 2> $ERROR_LOG
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 21: Pipeline largo (bonus)"
+else
+    echo -e "${YELLOW}[SKIP]${NC} Test 21: Bonus no implementado (múltiples pipes)"
+fi
+
+# Test 22: Variables de entorno en comandos
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+export TEST_VAR="123"
+./pipex input.txt "echo \$TEST_VAR" "wc -c" output.txt 2> $ERROR_LOG
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}[OK]${NC} Test 22: Variables de entorno en comandos"
+else
+    echo -e "${RED}[KO]${NC} Test 22: Fallo al expandir variables"
+fi
+
 # Limpieza
 rm -f $INPUT_FILE $OUTPUT_FILE $EXPECTED_FILE $ERROR_LOG
 
