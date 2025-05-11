@@ -27,7 +27,7 @@ echo -e "${GREEN}
        @@    @      @    @@       
              :@    @:             
                @  @               
-               @  @         PIPEX Crash Kraken by fran-byte                
+               @  @         PIPEX Crash-Kraken by fran-byte                
 ${NC}"
 
 # Compilación
