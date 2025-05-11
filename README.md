@@ -183,7 +183,7 @@ else
     echo -e "${GREEN}[OK]${NC} Test 19: Comando inválido genera error"
 fi
 
-# Test 20: Pipeline largo (bonus) → PENÚLTIMO
+# Test 20: Pipeline largo (bonus)
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 ./pipex input.txt "cat" "grep a" "wc -l" output.txt 2> $ERROR_LOG
 if [ $? -eq 0 ]; then
@@ -192,7 +192,7 @@ else
     echo -e "${YELLOW}[SKIP]${NC} Test 20: Bonus no implementado (múltiples pipes)"
 fi
 
-# Test 21: Ruta absoluta → ÚLTIMO TEST
+# Test 21: Ruta absoluta
 run_test 21 "/usr/bin/sort" "uniq"
 
 # Limpieza final
