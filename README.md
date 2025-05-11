@@ -1,5 +1,35 @@
 #!/bin/bash
 
+# ASCII Art: CrashKraken
+echo -e "
+                 .,::,.                 
+               'ckKXXKkc'               
+            .;xXWNOxxONWXx;.            
+           .dNWKd;....;dKWNd.           
+          .xWXo'.ck00kc.'oXWx.          
+          '0Xc.;0WNKKNW0;.cX0'          
+          .d0,.kWO;..;OWk.,0d.          
+           'xl.dXc    cXd.lx'           
+            lx.'xl.   lx'.xl            
+           .cxo,':.  .:',oxc.           
+             .,'...  ...',.             
+           .';';;......;;';'.           
+   ..';::::;;;cl,:;..;:,lc;;;::::;'..   
+.:xkxdl:;;cllc;;c:.  .:c;;cllc;;:ldxkx:.
+oXx;.  .d0x:..;o,      ,o:..:x0d.  .;xXo
+dx.   .dXo.  :O:        :O:  .oXd.   .xd
+.,.   .OK,   lK:        :Ko   ,KO.   .,.
+      .cOc   ,Ok'      'k0,   cOc.      
+        ':.   ,kx'    'xk,   .:'        
+               .dd.  .dd.               
+                .dl..ld.                
+                 cl..lc                 
+                .;.  .;.                
+                ..    ..
+"
+
+#!/bin/bash
+
 # Colores
 GREEN="\033[0;32m"
 RED="\033[0;31m"
