@@ -192,8 +192,8 @@ else
     echo -e "${YELLOW}[SKIP]${NC} Test 20: Bonus no implementado (múltiples pipes)"
 fi
 
-# Test 21: Ruta absoluta
-run_test 21 "/usr/bin/sort" "uniq"
+# Test 21: Ruta absoluta (verifica la ruta de sort en tu sistema operativo)
+run_test 21 "/bin/sort" "uniq"
 
 # Limpieza final
 rm -f $INPUT_FILE $OUTPUT_FILE $EXPECTED_FILE $ERROR_LOG
